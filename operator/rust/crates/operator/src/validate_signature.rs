@@ -20,7 +20,10 @@ use std::{env, str::FromStr};
 pub const fn get_rpc_url() -> &'static str {
     match option_env!("TESTNET_RPC_URL") {
         Some(url) => url,
-        None => "http://ethereum:8545",
+        None => match option_env!("RPC_URL") {
+            Some(url) => url,
+            None => "http://ethereum:8545",
+        },
     }
 }
 pub const ANVIL_RPC_URL: &str = get_rpc_url();
