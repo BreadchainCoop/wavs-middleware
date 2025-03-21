@@ -29,13 +29,17 @@ pub const ANVIL_RPC_URL: &str = get_rpc_url();
 static KEY: Lazy<String> =
     Lazy::new(|| env::var("PRIVATE_KEY").expect("failed to retrieve private key"));
 
+static CHAIN_ID: Lazy<String> =
+    Lazy::new(|| env::var("CHAIN_ID").unwrap_or_else(|_| "11000".to_string()));
+
 async fn register_operator() -> eyre::Result<()> {
     let pr = get_signer(&KEY.clone(), ANVIL_RPC_URL);
     let signer = PrivateKeySigner::from_str(&KEY.clone())?;
 
     let default_slasher = Address::ZERO;
 
-    let data = std::fs::read_to_string("contracts/deployments/core/17000.json")?;
+    let core_deployment_path = format!("contracts/deployments/core/{}.json", *CHAIN_ID);
+    let data = std::fs::read_to_string(&core_deployment_path)?;
     let el_parsed: EigenLayerData = serde_json::from_str(&data)?;
     let delegation_manager_address: Address = el_parsed.addresses.delegation.parse()?;
     let avs_directory_address: Address = el_parsed.addresses.avs_directory.parse()?;
@@ -60,11 +64,12 @@ async fn register_operator() -> eyre::Result<()> {
     let salt = FixedBytes::from_slice(&salt);
     let now = Utc::now().timestamp();
     let expiry: U256 = U256::from(now + 3600);
-    let data = std::fs::read_to_string("contracts/deployments/wavs-middleware/17000.json")?;
+    let wavs_middleware_path = format!("contracts/deployments/wavs-middleware/{}.json", *CHAIN_ID);
+    let data = std::fs::read_to_string(&wavs_middleware_path)?;
     get_logger().info(&format!("wavs-middleware deployment data: {}", data), &"");
     // Use the correct parse function for LayerMiddleware JSON
     let layer_service_manager_address = parse_layer_service_manager(
-        "contracts/deployments/wavs-middleware/17000.json",
+        &wavs_middleware_path,
     )?;
     get_logger().info(&format!("layer_service_manager_address: {}", layer_service_manager_address), &"");
     let digest_hash = elcontracts_reader_instance
@@ -86,7 +91,7 @@ async fn register_operator() -> eyre::Result<()> {
 
     // Use the LayerMiddleware parsing function for stake registry
     let stake_registry_address = parse_stake_registry_address_layer(
-        "contracts/deployments/wavs-middleware/17000.json",
+        &wavs_middleware_path,
     )?;
     let contract_ecdsa_stake_registry =
         ECDSAStakeRegistry::new(stake_registry_address, &pr);

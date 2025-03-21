@@ -38,6 +38,9 @@ pub const ANVIL_RPC_URL: &str = get_rpc_url();
 static KEY: Lazy<String> =
     Lazy::new(|| env::var("PRIVATE_KEY").expect("failed to retrieve private key"));
 
+static CHAIN_ID: Lazy<String> =
+    Lazy::new(|| env::var("CHAIN_ID").unwrap_or_else(|_| "11000".to_string()));
+
 async fn sign_and_response_to_task(
     task_index: u32,
     task_created_block: u32,
@@ -63,8 +66,9 @@ async fn sign_and_response_to_task(
         &format!("Signing and responding to task : {:?}", task_index),
         "",
     );
+    let hello_world_path = format!("contracts/deployments/hello-world/{}.json", *CHAIN_ID);
     let hello_world_contract_address: Address =
-    parse_hello_world_service_manager("contracts/deployments/hello-world/17000.json")?;
+        parse_hello_world_service_manager(&hello_world_path)?;
     let hello_world_contract = HelloWorldServiceManager::new(hello_world_contract_address, &pr);
 
     let response_hash = hello_world_contract
@@ -92,8 +96,9 @@ async fn sign_and_response_to_task(
 /// Monitor new tasks
 async fn monitor_new_tasks() -> Result<()> {
     let pr = get_signer(&KEY.clone(), ANVIL_RPC_URL);
+    let hello_world_path = format!("contracts/deployments/hello-world/{}.json", *CHAIN_ID);
     let hello_world_contract_address: Address =
-        parse_hello_world_service_manager("contracts/deployments/hello-world/17000.json")?;
+        parse_hello_world_service_manager(&hello_world_path)?;
     let mut latest_processed_block = pr.get_block_number().await?;
 
     loop {
@@ -135,7 +140,8 @@ async fn register_operator() -> Result<()> {
     let default_slasher = Address::ZERO; // We don't need slasher for our example.
     let default_strategy = Address::ZERO; // We don't need strategy for our example.
 
-    let data = std::fs::read_to_string("contracts/deployments/core/17000.json")?;
+    let core_deployment_path = format!("contracts/deployments/core/{}.json", *CHAIN_ID);
+    let data = std::fs::read_to_string(&core_deployment_path)?;
     let el_parsed: EigenLayerData = serde_json::from_str(&data)?;
     let delegation_manager_address: Address = el_parsed.addresses.delegation.parse()?;
     let avs_directory_address: Address = el_parsed.addresses.avs_directory.parse()?;
@@ -187,8 +193,9 @@ async fn register_operator() -> Result<()> {
     let now = Utc::now().timestamp();
     let expiry: U256 = U256::from(now + 3600);
 
+    let hello_world_path = format!("contracts/deployments/hello-world/{}.json", *CHAIN_ID);
     let hello_world_contract_address: Address =
-        parse_hello_world_service_manager("contracts/deployments/hello-world/17000.json")?;
+        parse_hello_world_service_manager(&hello_world_path)?;
     let digest_hash = elcontracts_reader_instance
         .calculate_operator_avs_registration_digest_hash(
             signer.address(),
@@ -205,7 +212,7 @@ async fn register_operator() -> Result<()> {
         expiry: expiry,
     };
     let stake_registry_address =
-        parse_stake_registry_address("contracts/deployments/hello-world/17000.json")?;
+        parse_stake_registry_address(&hello_world_path)?;
     let contract_ecdsa_stake_registry = ECDSAStakeRegistry::new(stake_registry_address, &pr);
     let registeroperator_details_call: alloy::contract::CallBuilder<
         _,

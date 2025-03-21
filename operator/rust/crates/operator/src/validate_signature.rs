@@ -66,6 +66,9 @@ fn read_private_keys() -> Result<Vec<String>> {
 static KEYS: Lazy<Vec<String>> =
     Lazy::new(|| read_private_keys().expect("failed to read private keys"));
 
+static CHAIN_ID: Lazy<String> =
+    Lazy::new(|| env::var("CHAIN_ID").unwrap_or_else(|_| "11000".to_string()));
+
 async fn validate_signature(message: String) -> Result<()> {
     let pr = get_signer(&KEYS[0], ANVIL_RPC_URL);
 
@@ -111,8 +114,9 @@ async fn validate_signature(message: String) -> Result<()> {
         dataHash: m_hash,
         signatureData: signature_data.into(),
     };
+    let wavs_middleware_path = format!("contracts/deployments/wavs-middleware/{}.json", *CHAIN_ID);
     let offchain_message_consumer_address = parse_offchain_message_consumer_address(
-        "contracts/deployments/wavs-middleware/17000.json",
+        &wavs_middleware_path,
     )?;
     let offchain_message_consumer =
         OffchainMessageConsumer::new(offchain_message_consumer_address, &pr);
