@@ -13,7 +13,6 @@ dist/
 .direnv/
 
 # Ignore editor-specific files
-.vscode/
 .idea/
 
 # Ignore TypeScript build artifacts
@@ -31,3 +30,7 @@ debug/
 
 yarn.lock
 
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+.gitignore
